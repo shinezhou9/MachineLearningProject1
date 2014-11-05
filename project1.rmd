@@ -1,0 +1,274 @@
+---
+title: "Machine Learning for Weight Lifting Excercises Data"
+author: "Shiming Zhou"
+output:
+  html_document:
+    keep_md: yes
+    toc: yes
+---
+## Background
+Using devices such as Jawbone Up, Nike FuelBand, and Fitbit it is now possible to collect a large amount of data about personal activity relatively inexpensively. These type of devices are part of the quantified self movement, One thing that people regularly do is quantify how much of a particular activity they do, but they rarely quantify how well they do it. In this project, we use data from accelerometers on the belt, forearm, arm, and dumbell of 6 participants. They were asked to perform barbell lifts correctly and incorrectly in 5 different ways. And the result can potentially provide useful information for a large variety of applications,such as sports training.
+
+## Executive Summary
+- We use dataset which include records from accelerometers on belt, foreare, arm and dumbell of 6 participants who perform barbell lifts in 5 different ways (include correct and incorrect ways) to build our predictive models.
+- Make feature plots to explore unrelated variabls and exclude them from dataset. And exclude variables including missing values because NA account for 98% observations in those variable including missing values. 
+- Data spliting: 70% - training data; 30% - test data, to validate the model.
+- Built 4 predictive models using different algorithms. Including RandomForest and Generalized Boosting. Each were build w/ and w/o Principle Component Analysis. 
+- Used 3-fold cross validation to train the Boosting models. No CV for RandomForest, since OOB (out of bag) estimation of out-of-sample error asymptotically equivalent to LOOCV as the number of trees increases (here 500)
+- Used test data to built Confusion Matrix and get the accuracy for each model. 
+- Plot the relationship between Processing Time and Accuracy for each model. And made heatmaps of Condusion Matrix for RandomForest and Boosting with PCA models.
+- Chose RandomForest as the final model (more than 99% accuracy, around 5 minutes processing time) and make prediction of the 20 test cases.
+- Rank the variable importance based on MeanDecreasGini.
+
+## Dataset
+The introduction of the WLE dataset
+[Qualitative Activity Recognition of Weight Lifting Exercises](http://groupware.les.inf.puc-rio.br/work.jsf?p1=11201)
+Six young health participants were asked to perform one set of 10 repetitions of the Unilateral Dumbbell Biceps Curl in five different fashions: exactly according to the specification (Class A), throwing the elbows to the front (Class B), lifting the dumbbell only halfway (Class C), lowering the dumbbell only halfway (Class D) and throwing the hips to the front (Class E).
+
+Class A corresponds to the specified execution of the exercise, while the other 4 classes correspond to common mistakes. Participants were supervised by an experienced weight lifter to make sure the execution complied to the manner they were supposed to simulate. The exercises were performed by six male participants aged between 20-28 years, with little weight lifting experience. We made sure that all participants could easily simulate the mistakes in a safe and controlled manner by using a relatively light dumbbell (1.25kg).
+
+Data are collected using an on-body sensing approach and "ambient sensing approach".
+
+Training dataset: 19622 observations and 160 variables.
+
+We are going to predict the exercise class for the testing data which include 20 observations.
+
+[training data](https://d396qusza40orc.cloudfront.net/predmachlearn/pml-training.csv)
+
+[testing data](https://d396qusza40orc.cloudfront.net/predmachlearn/pml-testing.csv)
+
+More information is available from the website here: [Human Activity Recognition](http://groupware.les.inf.puc-rio.br/har) (see the section on the Weight Lifting Exercise Dataset). 
+
+## Preprocessing the Data
+### Download & Read the data
+```{r cache =TRUE}
+library(downloader)
+download("https://d396qusza40orc.cloudfront.net/predmachlearn/pml-training.csv", destfile="training.csv")
+download("https://d396qusza40orc.cloudfront.net/predmachlearn/pml-testing.csv", destfile="testing.csv")
+```
+
+```{r cache=TRUE}
+library(AppliedPredictiveModeling)
+library(ggplot2)
+training <- read.csv("training.csv", na.string="#DIV/0!")
+testing <- read.csv("testing.csv", na.string="#DIV/0!")
+```
+
+### Exploratory the Data
+
+```{r cache=FALSE, fig.height=10, fig.width = 10}
+library(caret)
+names(training)[1:7]
+featurePlot(x=training[,1:7], y=training$classe, plot="pairs")
+training <- training[,-c(1:7)]
+testing <- testing[,-c(1:7)]
+```
+From the pair plots, We can see that the first seven variables make no sence to the classe prediction, the first column is the seriel number of the observations. and the prediction should not consider the participants's name, the activity time, etc when building the model used for make generalized prediction in the future. Therefore, we removed the first seven variables from the dataset.  
+
+### Dealing with factor variables
+```{r cache=FALSE,echo=FALSE}
+colClass <- sapply(training, class)
+colF <- which(colClass=="factor")
+trainingF <- training[, colF]
+summary(trainingF)
+trainingNF <- training[, -colF]
+testingNF <- testing[, -colF]
+```
+From the summary for factor variables, we found that All the factor variables have 19216 NAs, we can see a pattern for the existed NA valudes, and the NA values acount for 98% observations, We remove all the factor variables. 
+
+### Dealing with missing values
+```{r cache=FALSE}
+colNA <- colSums(is.na(trainingNF))
+training1 <- trainingNF[, which(colNA==0)]
+trainingFinal <- cbind(training1, classe = training$classe)
+testing1 <- testingNF[, which(colNA==0)]
+testingFinal <- cbind(testing1, classe = testing$problem_id)
+
+```
+all those remaining columns, which include NAs, have more than 19000 NAs, means more than 98% of the values for corresponding columes are missing, indicating that those variables have little influence to the final exercise quality. therefore, we remove them and got our training1 dataframe, after add the `classe` column from the original dataframe, we got our final data set `trainingFinal` which include 52 predictors after exclude the `classe` column.
+
+## Build predictive Model 
+### Create training (build the model) and testing data(validation) 
+we use 70% of the training data to train our model, and use the remaining 30% to validate our model
+```{r cache=FALSE}
+set.seed(123)
+useData <- createDataPartition(y=trainingFinal$classe, p=0.7, list=FALSE)
+myTraining <- trainingFinal[useData,]
+myTesting <- trainingFinal[-useData,]
+```
+
+### Preprocess with Principle Component Analysis
+- we may not need every predictor
+- PCA is and effective way in reducing the size of the problem without losing much accuracy.
+- We set the threshold cumulative variance to 80%.
+- Omission of PCA permits variable importance ranking, a nice insight into the problem.
+
+```{r cache=FALSE}
+preProc <- preProcess(myTraining[,-53], method="pca", thresh=.8)
+myTrainingPC <- predict(preProc, myTraining[,-53])
+myTestingPC <- predict(preProc, myTesting[,-53])
+
+```
+
+### Parallel processing 
+Use doSNOW for doing parallel processing
+
+```{r}
+library(doSNOW)
+registerDoSNOW(makeCluster(2, type = "SOCK"))
+```
+
+## Build the Predictive Model
+We select RandomForest and Boosting, the top 2 performing algorithms in predicting contents, to build our model. 
+For each algorithm, we build two models w/ and w/o PCA preprocessing. 
+
+### 1.RandomForest: 
+- Breiman's random forest algorithm (based on Breiman and Cutler's original Fortran code) for classification.
+- Using 500 trees and mtry = square root of p, the number of predictors(equals to 7 in this case)
+- Cross Validation: not required for random forests, since each tree uses, on average, 2/3 of the observations, OOB (out of bag) estimation of out-of-sample error is valid and is asymptotically equivalent to LOOCV as the number of trees increases (here 500)
+
+#### RandomForest with PCA
+```{r cache = TRUE,echo=FALSE}
+library(randomForest)
+set.seed(1234)
+
+t1 <- Sys.time()
+modFit1 <- randomForest(myTraining$classe~., data=myTrainingPC, importance = TRUE, proximity = TRUE)
+t2 <- Sys.time()
+tmodFit1 <- difftime(t2,t1)
+pred1 <- predict(modFit1, myTestingPC)
+confu1 <- confusionMatrix(pred1, myTesting$classe)
+modFit1
+```
+
+#### Randomforest without PCA
+```{r cache=FALSE,echo=FALSE}
+library(randomForest)
+set.seed(1234)
+
+t3 <- Sys.time()
+modFit2 <- randomForest(classe~., data=myTraining, importance = TRUE, proximity = TRUE)
+t4 <- Sys.time()
+tmodFit2 <- difftime(t4,t3)
+
+pred2 <- predict(modFit2, myTesting)
+confu2 <- confusionMatrix(pred2, myTesting$classe)
+modFit2
+```
+
+### Boosting 
+- Boosting is the process of iteratively adding basis functions in a greedy fashion so that each additional basis function further reduces the selected loss function.
+- We use generalized boosted with trees model
+- Using 500 trees and Max Tree Depth = 3, shrinkage = .1, 
+- Cross Validation:  Used for better estimating how accurately a predictive model will perform in practice. Number of cross-validation folds equals to 3, and we will get an estimate of generalization error
+
+#### Boosting without PCA (generalized Boosted with trees Model)
+```{r cache=TRUE,echo=FALSE}
+set.seed(1234)
+t5 <- Sys.time()
+marsGrid <- expand.grid(n.trees = 500 , interaction.depth = 3, shrinkage=.1)
+modFit3 <- train(classe~., data = myTraining, method="gbm",tuneGrid = marsGrid, trControl = trainControl(method="cv", number = 3, repeats=1), verbose = FALSE)
+t6 <- Sys.time()
+tmodFit3 <- difftime(t6,t5)
+
+pred3 <- predict(modFit3, myTesting)
+confu3 <- confusionMatrix(pred3, myTesting$classe)
+modFit3
+```
+
+#### Boosting with PCA
+```{r cache=TRUE,echo=FALSE}
+set.seed(1234)
+t7 <- Sys.time()
+marsGrid <- expand.grid(n.trees = 500 , interaction.depth = 3, shrinkage=.1)
+modFit4 <- train(myTraining$classe~., data = myTrainingPC, method="gbm",tuneGrid = marsGrid, trControl = trainControl(method="cv", number = 3, repeats=1), verbose = FALSE)
+t8 <- Sys.time()
+tmodFit4 <- difftime(t8,t7)
+
+pred4 <- predict(modFit4, myTestingPC)
+confu4 <- confusionMatrix(pred4, myTesting$classe)
+modFit4
+```
+
+## Model Selecting
+### Compare Accurary & Processing Time of different predictive models
+- Processing Time: During the model building process, we use Sys.time to computing time needed to execution expression. 
+- Accuracy: The accuracy for each model are acquired through the confusion Matrix. Showing the accuracy when predicting the test data using each model. Which equals to (1- out of sample error). 
+- The following plot the relationship between the process time and the accuracy for each model.
+```{r echo=FALSE,fig.height=4, fig.width=6}
+library(ggplot2)
+accuracy <- c(confu1$overall[1], confu2$overall[1],confu3$overall[1], confu4$overall[1])
+proTime <- c(tmodFit1, tmodFit2, tmodFit3, tmodFit4)
+model <- c("rfPCA", "rf", "bs","bsPCA")
+compare <- data.frame(accuracy, proTime, model)
+qplot(proTime, accuracy, data =compare, size = 50, color=model,xlab="process time (min)", main = "compare 4 models")
+```
+
+we can see that the randomForest use the longest time but with the highest accuracy. and the boosting with PCA has the lowest accuracy but it only require a little more than 1 minutes. 
+
+Now, we want to campare these two models with the heatmaps to show the confusion Matrix, in order to see how these two models predict for each classe.
+
+### Visualize heatmaps of the confusionMatrix of randomForest vs boosting with PCA
+We normalize the confusion Matrix first and then use the hearmaps to show the normalized frequency. 
+```{r echo=FALSE}
+library(som)
+library(reshape2)
+
+table2 <- confu2$table
+table2.normalized <- normalize(table2)
+colnames(table2.normalized) <- rownames(table2.normalized)
+table2.melt <- melt(table2.normalized)
+names(table2.melt) <- c("Prediction","Reference","N.Frequency")
+
+plot2 <- ggplot(table2.melt)
+plot2 + geom_tile(aes(x=Reference, y=Prediction, fill=N.Frequency)) + scale_x_discrete(name="Actual Class") + scale_y_discrete(name="Predicted Class") + scale_fill_gradient(breaks=seq(from=-0.5, to=1.8, by=.05)) + guides(fill = guide_legend(ncol = 4))+labs(title = "Normalized Confusion Matrix for randomForest")+ labs(fill="Normalized\nFrequency")
+```
+
+```{r echo=FALSE}
+table4 <- confu4$table
+table4.normalized <- normalize(table4)
+colnames(table4.normalized) <- rownames(table4.normalized)
+table4.melt <- melt(table4.normalized)
+names(table4.melt) <- c("Prediction","Reference","N.Frequency")
+
+plot4 <- ggplot(table4.melt)
+plot4 + geom_tile(aes(x=Reference, y=Prediction, fill=N.Frequency)) + scale_x_discrete(name="Actual Class") + scale_y_discrete(name="Predicted Class") + scale_fill_gradient(breaks=seq(from=-0.5, to=1.8, by=.05)) + labs(fill="Normalized\nFrequency")+guides(fill = guide_legend(ncol = 4))+labs(title = "Normalized Confusion Matrix for Boosting with PCA")
+```
+
+We can see the rf model can predict for each classe slightly better. 
+
+### Final Model
+After compare the process time, the accurancy, we choose the randomForest without PCA as our final model to make the prediction of the test cases. Althrough it requires the longest processing time, but 5 minutes are in an acceptable range and we can get a model with really good accuracy(more than 99%).
+
+No PCA required for 99% accuracy. Omission of PCA permits variable importance ranking, which can give a nice insight into the problem.
+
+randomForest (function and pkg, Breiman's algorithm) on a reduced set of predictors using 500 trees and mtry = square root of p (equals to 7 here), the number of predictors.
+
+
+## Predict Results
+We use RandomForest Predictive Model (model2) to predict our 20 cases.
+```{r, echo=FALSE}
+predictionFinal <- predict(modFit2, testingFinal)
+predictionFinal
+```
+
+## Variable Importance Ranking
+
+The following plot shows the variable importance based on the MeanDecreaseGini for each sensor position. And we also gave the variables which has MeanDecreasGini>250.
+
+```{r echo=FALSE}
+impor <- as.data.frame(modFit2$importance[,7])
+impor$sensor <- c(rep("belt", 13), rep("arm",13), rep("dumbbell",13), rep("forearm", 13))
+impor$index <- rep(c("roll", "pitch", "yaw", "total_accel", "gyros_x", "gyros_y","gyros_z", "accel_x", "accel_y", "accel_z","magnet_x","magnet_y", "magnet_z"), 4)
+names(impor) <- c("MeanDecreaseGini", "AccelPosition", "Index")
+qplot(AccelPosition, MeanDecreaseGini, data = impor, size = MeanDecreaseGini, colour = Index)
+
+imporRank <- impor[order(impor$MeanDecreaseGini, decreasing=TRUE),]
+head(imporRank, 13)
+```
+From the plot, we can see than the `roll_belt` and `yaw_belt` are the most two important variables for the Weight Lifting performance quality. And the varaibles related with arm has least influence to the performance quality. 
+
+These results can potentially provide useful information for a large variety of applications,such as sports training. We can get to know which position or what kind of mistake of the exercise caused. These results can also be applied when developing new monitoring advices which focus on helping people to correct their exercises quality. 
+
+
+
