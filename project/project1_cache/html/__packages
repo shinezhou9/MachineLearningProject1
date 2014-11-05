@@ -1,0 +1,14 @@
+AppliedPredictiveModeling
+base
+caret
+doSNOW
+downloader
+foreach
+gbm
+ggplot2
+iterators
+lattice
+plyr
+randomForest
+snow
+survival
