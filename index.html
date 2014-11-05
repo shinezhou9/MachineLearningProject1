@@ -28,7 +28,7 @@
       </header>
       <section>
         <h1>
-<a id="machine-learning-for-weight-lifting-exercises-data" class="anchor" href="#machine-learning-for-weight-lifting-exercises-data" aria-hidden="true"><span class="octicon octicon-link"></span></a>Machine Learning for Weight Lifting Exercises Data</h1>
+<a id="machine-learning-for-weight-lifting-excercises-data" class="anchor" href="#machine-learning-for-weight-lifting-excercises-data" aria-hidden="true"><span class="octicon octicon-link"></span></a>Machine Learning for Weight Lifting Excercises Data</h1>
 
 <p>Shiming Zhou  </p>
 
@@ -79,37 +79,32 @@ Six young health participants were asked to perform one set of 10 repetitions of
 <h3>
 <a id="download--read-the-data" class="anchor" href="#download--read-the-data" aria-hidden="true"><span class="octicon octicon-link"></span></a>Download &amp; Read the data</h3>
 
-<div class="highlight highlight-r"><pre><span class="kn">library</span><span class="p">(</span>downloader<span class="p">)</span>
-download<span class="p">(</span><span class="s">"https://d396qusza40orc.cloudfront.net/predmachlearn/pml-training.csv"</span><span class="p">,</span> destfile<span class="o">=</span><span class="s">"training.csv"</span><span class="p">)</span>
-download<span class="p">(</span><span class="s">"https://d396qusza40orc.cloudfront.net/predmachlearn/pml-testing.csv"</span><span class="p">,</span> destfile<span class="o">=</span><span class="s">"testing.csv"</span><span class="p">)</span>
-</pre></div>
+<div class="highlight highlight-r"><pre>library(<span class="nv">downloader</span>)
+download(<span class="s2">"https://d396qusza40orc.cloudfront.net/predmachlearn/pml-training.csv"</span>, <span class="nv">destfile</span><span class="o">=</span><span class="s2">"training.csv"</span>)
+download(<span class="s2">"https://d396qusza40orc.cloudfront.net/predmachlearn/pml-testing.csv"</span>, <span class="nv">destfile</span><span class="o">=</span><span class="s2">"testing.csv"</span>)</pre></div>
 
-<div class="highlight highlight-r"><pre><span class="kn">library</span><span class="p">(</span>AppliedPredictiveModeling<span class="p">)</span>
-<span class="kn">library</span><span class="p">(</span>ggplot2<span class="p">)</span>
-training <span class="o">&lt;-</span> read.csv<span class="p">(</span><span class="s">"training.csv"</span><span class="p">,</span> na.string<span class="o">=</span><span class="s">"#DIV/0!"</span><span class="p">)</span>
-testing <span class="o">&lt;-</span> read.csv<span class="p">(</span><span class="s">"testing.csv"</span><span class="p">,</span> na.string<span class="o">=</span><span class="s">"#DIV/0!"</span><span class="p">)</span>
-</pre></div>
+<div class="highlight highlight-r"><pre>library(<span class="nv">AppliedPredictiveModeling</span>)
+library(<span class="nv">ggplot2</span>)
+<span class="nv">training</span> <span class="o">&lt;-</span> read.csv(<span class="s2">"training.csv"</span>, <span class="nv">na.string</span><span class="o">=</span><span class="s2">"#DIV/0!"</span>)
+<span class="nv">testing</span> <span class="o">&lt;-</span> read.csv(<span class="s2">"testing.csv"</span>, <span class="nv">na.string</span><span class="o">=</span><span class="s2">"#DIV/0!"</span>)</pre></div>
 
 <h3>
 <a id="exploratory-the-data" class="anchor" href="#exploratory-the-data" aria-hidden="true"><span class="octicon octicon-link"></span></a>Exploratory the Data</h3>
 
-<div class="highlight highlight-r"><pre><span class="kn">library</span><span class="p">(</span>caret<span class="p">)</span>
-<span class="kp">names</span><span class="p">(</span>training<span class="p">)[</span><span class="m">1</span><span class="o">:</span><span class="m">7</span><span class="p">]</span>
-</pre></div>
+<div class="highlight highlight-r"><pre>library(<span class="nv">caret</span>)
+names(<span class="nv">training</span>)[<span class="m">1</span><span class="k">:</span><span class="m">7</span>]</pre></div>
 
 <pre><code>## [1] "X"                    "user_name"            "raw_timestamp_part_1"
 ## [4] "raw_timestamp_part_2" "cvtd_timestamp"       "new_window"          
 ## [7] "num_window"
 </code></pre>
 
-<div class="highlight highlight-r"><pre>featurePlot<span class="p">(</span>x<span class="o">=</span>training<span class="p">[,</span><span class="m">1</span><span class="o">:</span><span class="m">7</span><span class="p">],</span> y<span class="o">=</span>training<span class="o">$</span>classe<span class="p">,</span> plot<span class="o">=</span><span class="s">"pairs"</span><span class="p">)</span>
-</pre></div>
+<div class="highlight highlight-r"><pre>featurePlot(<span class="nv">x</span><span class="o">=</span><span class="nv">training</span>[,<span class="m">1</span><span class="k">:</span><span class="m">7</span>], <span class="nv">y</span><span class="o">=</span><span class="nv">training</span><span class="k">$</span><span class="nv">classe</span>, <span class="nv">plot</span><span class="o">=</span><span class="s2">"pairs"</span>)</pre></div>
 
 <p><img src="./project1_files/figure-html/unnamed-chunk-3.png" alt="plot of chunk unnamed-chunk-3"> </p>
 
-<div class="highlight highlight-r"><pre>training <span class="o">&lt;-</span> training<span class="p">[,</span><span class="o">-</span><span class="kt">c</span><span class="p">(</span><span class="m">1</span><span class="o">:</span><span class="m">7</span><span class="p">)]</span>
-testing <span class="o">&lt;-</span> testing<span class="p">[,</span><span class="o">-</span><span class="kt">c</span><span class="p">(</span><span class="m">1</span><span class="o">:</span><span class="m">7</span><span class="p">)]</span>
-</pre></div>
+<div class="highlight highlight-r"><pre><span class="nv">training</span> <span class="o">&lt;-</span> <span class="nv">training</span>[,<span class="o">-</span>c(<span class="m">1</span><span class="k">:</span><span class="m">7</span>)]
+<span class="nv">testing</span> <span class="o">&lt;-</span> <span class="nv">testing</span>[,<span class="o">-</span>c(<span class="m">1</span><span class="k">:</span><span class="m">7</span>)]</pre></div>
 
 <p>From the pair plots, We can see that the first seven variables make no sence to the classe prediction, the first column is the seriel number of the observations. and the prediction should not consider the participants's name, the activity time, etc when building the model used for make generalized prediction in the future. Therefore, we removed the first seven variables from the dataset.  </p>
 
@@ -275,12 +270,11 @@ testing <span class="o">&lt;-</span> testing<span class="p">[,</span><span class
 <h3>
 <a id="dealing-with-missing-values" class="anchor" href="#dealing-with-missing-values" aria-hidden="true"><span class="octicon octicon-link"></span></a>Dealing with missing values</h3>
 
-<div class="highlight highlight-r"><pre>colNA <span class="o">&lt;-</span> <span class="kp">colSums</span><span class="p">(</span><span class="kp">is.na</span><span class="p">(</span>trainingNF<span class="p">))</span>
-training1 <span class="o">&lt;-</span> trainingNF<span class="p">[,</span> <span class="kp">which</span><span class="p">(</span>colNA<span class="o">==</span><span class="m">0</span><span class="p">)]</span>
-trainingFinal <span class="o">&lt;-</span> <span class="kp">cbind</span><span class="p">(</span>training1<span class="p">,</span> classe <span class="o">=</span> training<span class="o">$</span>classe<span class="p">)</span>
-testing1 <span class="o">&lt;-</span> testingNF<span class="p">[,</span> <span class="kp">which</span><span class="p">(</span>colNA<span class="o">==</span><span class="m">0</span><span class="p">)]</span>
-testingFinal <span class="o">&lt;-</span> <span class="kp">cbind</span><span class="p">(</span>testing1<span class="p">,</span> classe <span class="o">=</span> testing<span class="o">$</span>problem_id<span class="p">)</span>
-</pre></div>
+<div class="highlight highlight-r"><pre><span class="nv">colNA</span> <span class="o">&lt;-</span> colSums(is.na(<span class="nv">trainingNF</span>))
+<span class="nv">training1</span> <span class="o">&lt;-</span> <span class="nv">trainingNF</span>[, which(<span class="nv">colNA</span><span class="o">==</span><span class="m">0</span>)]
+<span class="nv">trainingFinal</span> <span class="o">&lt;-</span> cbind(<span class="nv">training1</span>, <span class="nv">classe</span> <span class="o">=</span> <span class="nv">training</span><span class="k">$</span><span class="nv">classe</span>)
+<span class="nv">testing1</span> <span class="o">&lt;-</span> <span class="nv">testingNF</span>[, which(<span class="nv">colNA</span><span class="o">==</span><span class="m">0</span>)]
+<span class="nv">testingFinal</span> <span class="o">&lt;-</span> cbind(<span class="nv">testing1</span>, <span class="nv">classe</span> <span class="o">=</span> <span class="nv">testing</span><span class="k">$</span><span class="nv">problem_id</span>)</pre></div>
 
 <p>all those remaining columns, which include NAs, have more than 19000 NAs, means more than 98% of the values for corresponding columes are missing, indicating that those variables have little influence to the final exercise quality. therefore, we remove them and got our training1 dataframe, after add the <code>classe</code> column from the original dataframe, we got our final data set <code>trainingFinal</code> which include 52 predictors after exclude the <code>classe</code> column.</p>
 
@@ -292,11 +286,10 @@ testingFinal <span class="o">&lt;-</span> <span class="kp">cbind</span><span cla
 
 <p>we use 70% of the training data to train our model, and use the remaining 30% to validate our model</p>
 
-<div class="highlight highlight-r"><pre><span class="kp">set.seed</span><span class="p">(</span><span class="m">123</span><span class="p">)</span>
-useData <span class="o">&lt;-</span> createDataPartition<span class="p">(</span>y<span class="o">=</span>trainingFinal<span class="o">$</span>classe<span class="p">,</span> p<span class="o">=</span><span class="m">0.7</span><span class="p">,</span> <span class="kt">list</span><span class="o">=</span><span class="kc">FALSE</span><span class="p">)</span>
-myTraining <span class="o">&lt;-</span> trainingFinal<span class="p">[</span>useData<span class="p">,]</span>
-myTesting <span class="o">&lt;-</span> trainingFinal<span class="p">[</span><span class="o">-</span>useData<span class="p">,]</span>
-</pre></div>
+<div class="highlight highlight-r"><pre>set.seed(<span class="m">123</span>)
+<span class="nv">useData</span> <span class="o">&lt;-</span> createDataPartition(<span class="nv">y</span><span class="o">=</span><span class="nv">trainingFinal</span><span class="k">$</span><span class="nv">classe</span>, <span class="nv">p</span><span class="o">=</span><span class="m">0.7</span>, <span class="nv">list</span><span class="o">=</span><span class="kc">FALSE</span>)
+<span class="nv">myTraining</span> <span class="o">&lt;-</span> <span class="nv">trainingFinal</span>[<span class="nv">useData</span>,]
+<span class="nv">myTesting</span> <span class="o">&lt;-</span> <span class="nv">trainingFinal</span>[<span class="o">-</span><span class="nv">useData</span>,]</pre></div>
 
 <h3>
 <a id="preprocess-with-principle-component-analysis" class="anchor" href="#preprocess-with-principle-component-analysis" aria-hidden="true"><span class="octicon octicon-link"></span></a>Preprocess with Principle Component Analysis</h3>
@@ -308,19 +301,17 @@ myTesting <span class="o">&lt;-</span> trainingFinal<span class="p">[</span><spa
 <li>Omission of PCA permits variable importance ranking, a nice insight into the problem.</li>
 </ul>
 
-<div class="highlight highlight-r"><pre>preProc <span class="o">&lt;-</span> preProcess<span class="p">(</span>myTraining<span class="p">[,</span><span class="m">-53</span><span class="p">],</span> method<span class="o">=</span><span class="s">"pca"</span><span class="p">,</span> thresh<span class="o">=</span><span class="m">.8</span><span class="p">)</span>
-myTrainingPC <span class="o">&lt;-</span> predict<span class="p">(</span>preProc<span class="p">,</span> myTraining<span class="p">[,</span><span class="m">-53</span><span class="p">])</span>
-myTestingPC <span class="o">&lt;-</span> predict<span class="p">(</span>preProc<span class="p">,</span> myTesting<span class="p">[,</span><span class="m">-53</span><span class="p">])</span>
-</pre></div>
+<div class="highlight highlight-r"><pre><span class="nv">preProc</span> <span class="o">&lt;-</span> preProcess(<span class="nv">myTraining</span>[,<span class="o">-</span><span class="m">53</span>], <span class="nv">method</span><span class="o">=</span><span class="s2">"pca"</span>, <span class="nv">thresh</span><span class="o">=</span>.<span class="m">8</span>)
+<span class="nv">myTrainingPC</span> <span class="o">&lt;-</span> predict(<span class="nv">preProc</span>, <span class="nv">myTraining</span>[,<span class="o">-</span><span class="m">53</span>])
+<span class="nv">myTestingPC</span> <span class="o">&lt;-</span> predict(<span class="nv">preProc</span>, <span class="nv">myTesting</span>[,<span class="o">-</span><span class="m">53</span>])</pre></div>
 
 <h3>
 <a id="parallel-processing" class="anchor" href="#parallel-processing" aria-hidden="true"><span class="octicon octicon-link"></span></a>Parallel processing</h3>
 
 <p>Use doSNOW for doing parallel processing</p>
 
-<div class="highlight highlight-r"><pre><span class="kn">library</span><span class="p">(</span>doSNOW<span class="p">)</span>
-registerDoSNOW<span class="p">(</span>makeCluster<span class="p">(</span><span class="m">2</span><span class="p">,</span> type <span class="o">=</span> <span class="s">"SOCK"</span><span class="p">))</span>
-</pre></div>
+<div class="highlight highlight-r"><pre>library(<span class="nv">doSNOW</span>)
+registerDoSNOW(makeCluster(<span class="m">2</span>, <span class="nv">type</span> <span class="o">=</span> <span class="s2">"SOCK"</span>))</pre></div>
 
 <h2>
 <a id="build-the-predictive-model" class="anchor" href="#build-the-predictive-model" aria-hidden="true"><span class="octicon octicon-link"></span></a>Build the Predictive Model</h2>
